@@ -6,14 +6,67 @@ import {
     RichUtils,
     convertToRaw,
     convertFromRaw,
+    Modifier,
+    SelectionState
 } from "draft-js";
 import "draft-js/dist/Draft.css";
+import Toolbar from "./Toolbar";
 
 const MyEditor = () => {
     const defaultTitle = "Demo editor by <Name>";
     const [titleState, setTitleState] = useState("");
     const [editorState, setEditorState] = useState(EditorState.createEmpty());
 
+    const handleBeforeInput = (chars, editorState) => {
+        const currentContent = editorState.getCurrentContent();
+        const selection = editorState.getSelection();
+
+        if (chars === ' ' && currentContent.getPlainText().endsWith('***')) {
+            // Calculate the end offset of the range to underline
+            const endOffset = selection.getEndOffset();
+
+            // Create a new SelectionState for the range to underline
+            const rangeToUnderline = SelectionState.createEmpty().merge({
+                anchorKey: selection.getAnchorKey(),
+                anchorOffset: endOffset - 4,
+                focusKey: selection.getFocusKey(),
+                focusOffset: endOffset,
+                isBackward: selection.getIsBackward(),
+                hasFocus: selection.getHasFocus(),
+            });
+
+            // Apply the underline style to the specified range
+            const contentWithUnderline = Modifier.applyInlineStyle(
+                currentContent,
+                rangeToUnderline,
+                'UNDERLINE'
+            );
+
+            // Remove " *** " from the content
+            const contentWithoutStars = Modifier.replaceText(
+                contentWithUnderline,
+                rangeToUnderline,
+                ''
+            );
+
+            // Update the editor state with the new content state
+            const newEditorState = EditorState.push(editorState, contentWithoutStars, 'apply-entity');
+
+            // Force selection to prevent "Invalid selection state" error
+            const finalEditorState = EditorState.forceSelection(
+                newEditorState,
+                contentWithoutStars.getSelectionAfter()
+            );
+
+            setEditorState(finalEditorState);
+
+            // Prevent Draft.js from processing the space character
+            return 'handled';
+        }
+
+        // Allow Draft.js to handle the input normally
+        return 'not-handled';
+    };
     const handleChange = (newEditorState) => {
         setEditorState(newEditorState);
     };
@@ -89,6 +142,7 @@ const MyEditor = () => {
 
                 <button className="button" type="button" onClick={handleSave} >Save</button>
             </div>
+            <Toolbar editorState={editorState} setEditorState={setEditorState} />
             <div
                 onClick={focusEditor}
                 style={{
@@ -105,6 +159,7 @@ const MyEditor = () => {
                     editorState={editorState}
                     onChange={handleChange}
                     handleKeyCommand={handleKeyCommand}
+                    handleBeforeInput={handleBeforeInput}
                 />
             </div>
         </div>
