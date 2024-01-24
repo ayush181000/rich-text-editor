@@ -87,7 +87,7 @@ const MyEditor = () => {
                     style={{ marginRight: "10px", flexGrow: 1 }}
                 />
 
-                <button className="button-54" type="button" onClick={handleSave} style={{ fontFamily: 'Comic Sans MS' }}>Save</button>
+                <button className="button" type="button" onClick={handleSave} >Save</button>
             </div>
             <div
                 onClick={focusEditor}
